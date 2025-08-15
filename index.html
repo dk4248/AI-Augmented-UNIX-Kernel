@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Augmented UNIX Kernel | Natural Language Shell Commands</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #00ff88;
+            --secondary: #00aaff;
+            --dark: #0a0e27;
+            --darker: #060818;
+            --light: #ffffff;
+            --gray: #94a3b8;
+            --code-bg: rgba(15, 23, 42, 0.8);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #060818 100%);
+            color: var(--light);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated Background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: radial-gradient(circle at 20% 50%, var(--primary) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, var(--secondary) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, #ff00aa 0%, transparent 50%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem 2rem;
+            background: rgba(10, 14, 39, 0.8);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        nav.scrolled {
+            padding: 1rem 2rem;
+            background: rgba(10, 14, 39, 0.95);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--gray);
+            text-decoration: none;
+            transition: color 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+        }
+
+        .hero-content {
+            max-width: 1200px;
+            text-align: center;
+            z-index: 1;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 5rem);
+            font-weight: 900;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 50%, #ff00aa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+            background-size: 200% 200%;
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            color: var(--gray);
+            margin-bottom: 3rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Terminal Demo */
+        .terminal-demo {
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 3rem auto;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0, 255, 136, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot:nth-child(1) { background: #ff5f56; }
+        .terminal-dot:nth-child(2) { background: #ffbd2e; }
+        .terminal-dot:nth-child(3) { background: #27c93f; }
+
+        .terminal-content {
+            font-family: 'Courier New', monospace;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .terminal-line {
+            margin: 0.5rem 0;
+            opacity: 0;
+            animation: fadeInUp 0.5s ease forwards;
+        }
+
+        .terminal-line:nth-child(2) { animation-delay: 0.5s; }
+        .terminal-line:nth-child(3) { animation-delay: 1s; }
+        .terminal-line:nth-child(4) { animation-delay: 1.5s; }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+        }
+
+        .prompt { color: var(--secondary); }
+        .command { color: var(--light); }
+        .output { color: var(--gray); }
+
+        /* CTA Buttons */
+        .cta-buttons {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--dark);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--light);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 5rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            color: var(--gray);
+            margin-bottom: 4rem;
+            font-size: 1.2rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), #ff00aa);
+            border-radius: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: -1;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 255, 136, 0.2);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: inline-block;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .feature-card:nth-child(2) .feature-icon { animation-delay: 0.5s; }
+        .feature-card:nth-child(3) .feature-icon { animation-delay: 1s; }
+        .feature-card:nth-child(4) .feature-icon { animation-delay: 1.5s; }
+        .feature-card:nth-child(5) .feature-icon { animation-delay: 2s; }
+        .feature-card:nth-child(6) .feature-icon { animation-delay: 2.5s; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .feature-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--light);
+        }
+
+        .feature-description {
+            color: var(--gray);
+            line-height: 1.8;
+        }
+
+        /* Models Section */
+        .models {
+            padding: 5rem 2rem;
+            background: rgba(6, 8, 24, 0.5);
+        }
+
+        .models-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 3rem;
+        }
+
+        .model-card {
+            background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 170, 255, 0.1));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.2);
+        }
+
+        .model-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .model-description {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        /* Installation Section */
+        .installation {
+            padding: 5rem 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        .code-block pre {
+            color: var(--light);
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary);
+            color: var(--dark);
+        }
+
+        /* Footer */
+        footer {
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 5rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .social-links a {
+            color: var(--gray);
+            font-size: 1.5rem;
+            transition: color 0.3s ease;
+        }
+
+        .social-links a:hover {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn {
+                width: 100%;
+                max-width: 300px;
+                justify-content: center;
+            }
+        }
+
+        /* Scroll animations */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .fade-in.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <nav id="navbar">
+        <div class="nav-content">
+            <div class="logo">
+                <span>🚀</span>
+                <span>AI-Kernel</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#models">Models</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="https://github.com/dk4248/AI-Augmented-UNIX-Kernel">GitHub</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>AI-Augmented UNIX Kernel</h1>
+            <p class="subtitle">Transform natural language into powerful shell commands with AI intelligence</p>
+            
+            <div class="terminal-demo">
+                <div class="terminal-header">
+                    <div class="terminal-dot"></div>
+                    <div class="terminal-dot"></div>
+                    <div class="terminal-dot"></div>
+                </div>
+                <div class="terminal-content">
+                    <div class="terminal-line">
+                        <span class="prompt">$</span> <span class="command">ai "find all large files in my home directory"</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output">→ Translating to: find ~ -type f -size +100M</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="prompt">$</span> <span class="command">ai "compress all images in this folder"</span>
+                    </div>
+                    <div class="terminal-line">
+                        <span class="output">→ Executing: for img in *.{jpg,png}; do convert "$img" -quality 85 "$img"; done</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cta-buttons">
+                <a href="#installation" class="btn btn-primary">
+                    <span>Get Started</span>
+                    <span>→</span>
+                </a>
+                <a href="https://github.com/dk4248/AI-Augmented-UNIX-Kernel" class="btn btn-secondary">
+                    <span>⭐</span>
+                    <span>Star on GitHub</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features fade-in" id="features">
+        <h2 class="section-title">Powerful Features</h2>
+        <p class="section-subtitle">Everything you need for AI-powered terminal productivity</p>
+        
+        <div class="features-grid">
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🎯</div>
+                <h3 class="feature-title">Natural Language Processing</h3>
+                <p class="feature-description">Describe what you want in plain English and watch as AI translates it into precise shell commands</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🤖</div>
+                <h3 class="feature-title">Multi-Model Support</h3>
+                <p class="feature-description">Choose between OpenAI GPT-4 for cloud or Ollama for powerful local AI models</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🔧</div>
+                <h3 class="feature-title">Error Auto-Fix</h3>
+                <p class="feature-description">Automatically analyzes failed commands and suggests intelligent fixes</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">⚡</div>
+                <h3 class="feature-title">Direct Execution</h3>
+                <p class="feature-description">Run commands directly with the / prefix for instant results</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🛡️</div>
+                <h3 class="feature-title">Safe Execution</h3>
+                <p class="feature-description">Built-in safety checks warn about potentially dangerous commands</p>
+            </div>
+
+            <div class="feature-card fade-in">
+                <div class="feature-icon">🎨</div>
+                <h3 class="feature-title">Context Aware</h3>
+                <p class="feature-description">Understands your current directory, system status, and git context</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="models fade-in" id="models">
+        <div class="models-content">
+            <h2 class="section-title">Supported AI Models</h2>
+            <p class="section-subtitle">Choose the perfect model for your needs</p>
+            
+            <div class="models-grid">
+                <div class="model-card">
+                    <div class="model-name">GPT-4</div>
+                    <div class="model-description">OpenAI's most capable model</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-name">DeepSeek R1 32B</div>
+                    <div class="model-description">Complex reasoning tasks</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-name">Qwen 2.5 32B</div>
+                    <div class="model-description">Excellent performance</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-name">Llama 3.1 8B</div>
+                    <div class="model-description">Meta's latest model</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-name">DeepSeek R1 8B</div>
+                    <div class="model-description">Efficient and fast</div>
+                </div>
+                <div class="model-card">
+                    <div class="model-name">Qwen 3 8B</div>
+                    <div class="model-description">Latest Qwen model</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="installation fade-in" id="installation">
+        <h2 class="section-title">Quick Installation</h2>
+        <p class="section-subtitle">Get up and running in minutes</p>
+        
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre># Clone the repository
+git clone https://github.com/dk4248/AI-Augmented-UNIX-Kernel.git
+cd AI-Augmented-UNIX-Kernel
+
+# Run the setup script
+chmod +x setup.sh
+./setup.sh
+
+# Configure your AI provider (choose one)
+export OPENAI_API_KEY='your-api-key-here'  # For OpenAI
+# OR
+ollama pull deepseek-r1:8b  # For local Ollama
+
+# Add to your shell
+echo "source $(pwd)/shell_integration/shell_ai_functions.sh" >> ~/.bashrc
+source ~/.bashrc</pre>
+        </div>
+
+        <h3 style="margin-top: 3rem; margin-bottom: 1rem; color: var(--primary);">Usage Examples</h3>
+        
+        <div class="code-block">
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+            <pre># Interactive mode
+ai
+
+# Single query
+ai "create a backup of my home directory"
+
+# Direct command execution
+ai "/ls -la"
+
+# Context-aware assistance
+ai-here "what large files can I delete?"
+
+# Git operations
+ai-git "create feature branch"</pre>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <p style="color: var(--gray); margin-bottom: 1rem;">Built with 💚 for the developer community</p>
+            <div class="social-links">
+                <a href="https://github.com/dk4248/AI-Augmented-UNIX-Kernel">
+                    <span>GitHub</span>
+                </a>
+                <a href="https://github.com/dk4248/AI-Augmented-UNIX-Kernel/issues">
+                    <span>Issues</span>
+                </a>
+                <a href="https://github.com/dk4248/AI-Augmented-UNIX-Kernel/blob/main/LICENSE">
+                    <span>License</span>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Fade in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.fade-in').forEach(el => {
+            observer.observe(el);
+        });
+
+        // Copy code functionality
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling;
+            const text = codeBlock.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.style.background = 'var(--primary)';
+                button.style.color = 'var(--dark)';
+                
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.style.background = 'rgba(0, 255, 136, 0.2)';
+                    button.style.color = 'var(--primary)';
+                }, 2000);
+            });
+        }
+
+        // Terminal typing effect
+        const terminalLines = document.querySelectorAll('.terminal-line');
+        terminalLines.forEach((line, index) => {
+            line.style.animationDelay = `${index * 0.5}s`;
+        });
+    </script>
+</body>
+</html>
